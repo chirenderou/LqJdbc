@@ -11,5 +11,6 @@ public interface DatabasesInterfaceForObject {
 	public Object oracle();
 	public Object mysql();
 	public Object sqlserver();
+	public String sqlLite();
 	
 }

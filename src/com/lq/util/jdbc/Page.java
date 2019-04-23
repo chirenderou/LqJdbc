@@ -12,7 +12,7 @@ import java.util.List;
  * email:liuqingrou@163.com
  */
 @SuppressWarnings({"serial"})
-public class Page implements Serializable {
+public class Page<T> implements Serializable {
 	
 	public static int DEFAULT_GROUP_PAGE_SIZE=Integer.valueOf(LqDBOperator.groupPageSize);
 	/**
@@ -30,7 +30,7 @@ public class Page implements Serializable {
 	/**
 	 * 当前页中存放的记录,类型一般为List
 	 */
-	private List data; // 当前页中存放的记录,类型一般为List
+	private List<T> data; // 当前页中存放的记录,类型一般为List
 	/**
 	 * 总记录数
 	 */
@@ -69,7 +69,7 @@ public class Page implements Serializable {
 	 * 构造方法，只构造空页.
 	 */
 	public Page() {
-		this(0, 0, DEFAULT_PAGE_SIZE, new ArrayList(),DEFAULT_GROUP_PAGE_SIZE);
+		this(0, 0, DEFAULT_PAGE_SIZE, new ArrayList<T>(),DEFAULT_GROUP_PAGE_SIZE);
 	}
 
 	/**
@@ -88,7 +88,7 @@ public class Page implements Serializable {
 
 	 * 
 	 */
-	public Page(long start, long totalSize, int pageSize, List data,int defaultGroupPageSize) {
+	public Page(long start, long totalSize, int pageSize, List<T> data,int defaultGroupPageSize) {
 		this.pageSize = pageSize;
 		this.start = start;
 		this.totalCount = totalSize;
@@ -166,7 +166,7 @@ public class Page implements Serializable {
 	/**
 	 * 取当前页中的记录.
 	 */
-	public List getResult() {
+	public List<T> getResult() {
 		return data;
 	}
 
@@ -176,7 +176,7 @@ public class Page implements Serializable {
 	 * @param data
 	 *            包装成值对象的列表
 	 */
-	public void setResult(List data) {
+	public void setResult(List<T> data) {
 		this.data = data;
 	}
 
@@ -235,10 +235,10 @@ public class Page implements Serializable {
 	public void setStart(long start) {
 		this.start = start;
 	}
-	public List getData() {
+	public List<T> getData() {
 		return data;
 	}
-	public void setData(List data) {
+	public void setData(List<T> data) {
 		this.data = data;
 	}
 	public void setPageSize(int pageSize) {

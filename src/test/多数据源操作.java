@@ -1,6 +1,7 @@
 package test;
 
 import java.util.List;
+import java.util.Map;
 
 import com.lq.util.jdbc.Jdbc;
 import com.lq.util.jdbc.Page;
@@ -8,6 +9,9 @@ import com.lq.util.jdbc.Page;
 public class 多数据源操作 extends BaseDB{
 	
 	public 多数据源操作(){
+		//得到除默认数据源外的所有数据源
+		Map map=Jdbc.getDSNames();
+		System.out.println(map);
 		//读取默认数据源
 		List list=Jdbc.find("select * from test");
 		//读取第二个数据源

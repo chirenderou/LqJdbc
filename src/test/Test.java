@@ -134,6 +134,11 @@ public class Test extends BaseDB{
 				listCs2.add("1");
 				return null;
 			}
+			public String sqlLite() {
+				sb.append("select * from admin where id=?");
+				listCs2.add("1");
+				return null;
+			}
 		});
 		List list2=Jdbc.find(sb.toString(),listCs2.toArray());
 		System.out.println(list2);

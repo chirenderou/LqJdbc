@@ -2,15 +2,11 @@ package com.lq.util.jdbc;
 
 import java.beans.PropertyVetoException;
 import java.sql.SQLException;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import com.mchange.v2.c3p0.ComboPooledDataSource;
-import com.sun.org.apache.bcel.internal.generic.NEW;
 
 /**
  * 数据库链接池<br>
@@ -82,29 +78,29 @@ public class LqDBOperator {
 	
 	
 
-	private static long c=0;
-	private static Lock  lock = new ReentrantLock();// 锁  
-	private static void main(String[] args) throws Exception {
-		for (int i = 0; i < 1000; i++) {
-			new Thread(){
-				public void run() {
-					System.out.println(new Date());
-					//List list=BaseDao.getJdbcTemplate().queryForList("select id from micro_blog_user limit 0,100");
-					//List list=BaseDao.getJdbcTemplate().queryForList("select id,title from zzy_seed limit 0,100");
-					//List list1=Jdbc.find("select id from micro_blog_user limit 0,10");
-//					lock.lock();
-					c+=1;
-//					lock.unlock();
-					run();
-				};
-			}.start();
-		}
-		while (true) {
-			System.err.println("num_connections: " + dsWebgame.getNumConnectionsDefaultUser());
-			System.err.println("num_busy_connections: " + dsWebgame.getNumBusyConnectionsDefaultUser());
-			System.err.println("num_idle_connections: " + dsWebgame.getNumIdleConnectionsDefaultUser());
-			System.err.println("-------------------------"+c+"-----------------------------------");
-			Thread.sleep(1000);
-		}
-	}
+//	private static long c=0;
+//	private static Lock  lock = new ReentrantLock();// 锁  
+//	private static void main(String[] args) throws Exception {
+//		for (int i = 0; i < 1000; i++) {
+//			new Thread(){
+//				public void run() {
+//					System.out.println(new Date());
+//					//List list=BaseDao.getJdbcTemplate().queryForList("select id from micro_blog_user limit 0,100");
+//					//List list=BaseDao.getJdbcTemplate().queryForList("select id,title from zzy_seed limit 0,100");
+//					//List list1=Jdbc.find("select id from micro_blog_user limit 0,10");
+////					lock.lock();
+//					c+=1;
+////					lock.unlock();
+//					run();
+//				};
+//			}.start();
+//		}
+//		while (true) {
+//			System.err.println("num_connections: " + dsWebgame.getNumConnectionsDefaultUser());
+//			System.err.println("num_busy_connections: " + dsWebgame.getNumBusyConnectionsDefaultUser());
+//			System.err.println("num_idle_connections: " + dsWebgame.getNumIdleConnectionsDefaultUser());
+//			System.err.println("-------------------------"+c+"-----------------------------------");
+//			Thread.sleep(1000);
+//		}
+//	}
 }

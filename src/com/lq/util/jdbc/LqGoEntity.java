@@ -31,11 +31,14 @@ public class LqGoEntity {
     private boolean f_sql = false; // 是否需要导入包java.sql.*
      
     //数据库连接
-    private static String URL ="";
-    private static String NAME = "";
-    private static String PASS = "";
-    private static String DRIVER ="com.mysql.jdbc.Driver";
-    private static String primaryId="";
+    private String URL ="";
+    private String NAME = "";
+    private String PASS = "";
+    private String DRIVER ="com.mysql.jdbc.Driver";
+    private String primaryId="";
+    
+    //动态路径
+    private String dynamicPath="";
     
     protected LqGoEntity() {}
      
@@ -48,12 +51,24 @@ public class LqGoEntity {
       * @param privateKey 主键,无主键设成唯一标识符的字段
       */
     protected LqGoEntity(String path,String tableName,String url,String driver,String privateKey){
+   	 bao=path;
+   	 tablename=tableName;
+   	 URL=url.split("\\*\\*\\*")[0];
+   	 NAME=url.split("\\*\\*\\*")[1];
+   	 PASS=url.split("\\*\\*\\*")[2];
+   	 DRIVER=driver;
+   	 //this.dynamicPath=dynamicPath;
+   	 m(privateKey);
+    }
+    
+    protected LqGoEntity(String path,String tableName,String url,String driver,String privateKey,String dynamicPath){
     	 bao=path;
     	 tablename=tableName;
     	 URL=url.split("\\*\\*\\*")[0];
     	 NAME=url.split("\\*\\*\\*")[1];
     	 PASS=url.split("\\*\\*\\*")[2];
     	 DRIVER=driver;
+    	 this.dynamicPath=dynamicPath;
     	 m(privateKey);
      }
      
@@ -70,6 +85,16 @@ public class LqGoEntity {
 	   	NAME=LqDBOperator.username;
 	   	PASS=LqDBOperator.pwd;
 	   	DRIVER=LqDBOperator.driverClassName;
+        m(privateKey);
+    }
+    protected LqGoEntity(String path,String tableName,String privateKey,String dynamicPath){
+    	bao=path;
+   	 	tablename=tableName;
+		URL=LqDBOperator.url;
+	   	NAME=LqDBOperator.username;
+	   	PASS=LqDBOperator.pwd;
+	   	DRIVER=LqDBOperator.driverClassName;
+	   	this.dynamicPath=dynamicPath;
         m(privateKey);
     }
     
@@ -160,11 +185,11 @@ public class LqGoEntity {
                 //System.out.println("绝对路径："+directory.getAbsolutePath());
                 //System.out.println("相对路径："+directory.getCanonicalPath());
                 //String path=this.getClass().getResource("").getPath();
-                File f=new File(directory.getAbsolutePath()+ "/src/"+bao.replaceAll("\\.", "/")+"/");
+                File f=new File(directory.getAbsolutePath()+ "/src/"+dynamicPath+bao.replaceAll("\\.", "/")+"/");
                 if (!f.exists()) {
         			f.mkdirs();
         		}
-                String wPath=directory.getAbsolutePath()+ "/src/"+bao.replaceAll("\\.", "/")+"/" + xhxCap(initcap(tablename)) + ".java";
+                String wPath=directory.getAbsolutePath()+ "/src/"+dynamicPath+bao.replaceAll("\\.", "/")+"/" + xhxCap(initcap(tablename)) + ".java";
                 FileWriter fw = new FileWriter(wPath);
                 PrintWriter pw = new PrintWriter(fw);
                 pw.println(content);
@@ -207,7 +232,9 @@ public class LqGoEntity {
             sb.append("import java.sql.*;\r\n");
         }
         sb.append("import com.lq.util.jdbc.Id;\r\n")
+        .append("import com.lq.util.jdbc.Column;\r\n")
         .append("import com.lq.util.jdbc.Sql;\r\n")
+        .append("import java.math.*;\r\n")
         .append("import com.lq.util.jdbc.Table;\r\n");
         //注释部分
         sb.append("/**\r\n");
@@ -233,6 +260,7 @@ public class LqGoEntity {
     private void processAllAttrs(StringBuffer sb) {
          
         for (int i = 0; i < colnames.length; i++) {
+        	sb.append("\t@Column(column=\""+colnames[i]+"\")\r\n");
             sb.append("\tprivate " + sqlType2JavaType(colTypes[i].toLowerCase()) + " " + colshowNames[i] + ";\r\n");
         }
          
@@ -306,35 +334,58 @@ public class LqGoEntity {
         		   sqlType.equalsIgnoreCase("blob")
         ){
             return "Byte";
-        }else if(sqlType.equalsIgnoreCase("smallint")){
+        }else if(
+        		   sqlType.equalsIgnoreCase("smallint")
+        		|| sqlType.equalsIgnoreCase("smallint unsigned")
+        ){
             return "Short";
         }else if(
         		   sqlType.equalsIgnoreCase("tinyint")
+        		|| sqlType.equalsIgnoreCase("tinyint unsigned")
         		|| sqlType.equalsIgnoreCase("int")
+        		|| sqlType.equalsIgnoreCase("int unsigned")
         		|| sqlType.equalsIgnoreCase("integer")
+        		|| sqlType.equalsIgnoreCase("integer unsigned")
         		|| sqlType.indexOf("identity")!=-1
         ){
             return "Integer";
         }else if(
-        		   sqlType.equalsIgnoreCase("bigint")
-        		|| sqlType.equalsIgnoreCase("number")
+        		   sqlType.equalsIgnoreCase("number")
+        		|| sqlType.equalsIgnoreCase("number unsigned")
         ){
             return "Long";
         }else if(
+        		sqlType.equalsIgnoreCase("bigint")
+        		|| sqlType.equalsIgnoreCase("bigint unsigned")
+        		){
+        	return "BigInteger";
+        }else if(
         		   sqlType.equalsIgnoreCase("float")
+        		|| sqlType.equalsIgnoreCase("float unsigned")
         		|| sqlType.equalsIgnoreCase("binary_float")
+        		|| sqlType.equalsIgnoreCase("binary_float unsigned")
         ){
             return "Float";
         }else if(
-        		   sqlType.equalsIgnoreCase("decimal") 
-        		|| sqlType.equalsIgnoreCase("numeric") 
+        		   sqlType.equalsIgnoreCase("numeric") 
+        		|| sqlType.equalsIgnoreCase("numeric unsigned") 
                 || sqlType.equalsIgnoreCase("real") 
+                || sqlType.equalsIgnoreCase("real unsigned") 
                 || sqlType.equalsIgnoreCase("money") 
+                || sqlType.equalsIgnoreCase("money unsigned") 
                 || sqlType.equalsIgnoreCase("smallmoney")
+                || sqlType.equalsIgnoreCase("smallmoney unsigned")
                 || sqlType.equalsIgnoreCase("binary_double")
+                || sqlType.equalsIgnoreCase("binary_double unsigned")
 				|| sqlType.equalsIgnoreCase("double")
+				|| sqlType.equalsIgnoreCase("double unsigned")
         ){
             return "Double";
+        }else if(
+        		   sqlType.equalsIgnoreCase("decimal")
+        		|| sqlType.equalsIgnoreCase("decimal unsigned")
+        ){
+        	return "BigDecimal";
         }else if(
         		   sqlType.equalsIgnoreCase("varchar") 
         		|| sqlType.equalsIgnoreCase("char") 

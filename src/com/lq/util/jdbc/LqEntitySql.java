@@ -13,12 +13,12 @@ import java.util.Map;
 public class LqEntitySql {
 	
 	private String sql;//SQL语句
-	private List cs;//对应的问号参数
-	private Map map;//需要拼接的语句
+	private List<Object> cs;//对应的问号参数
+	private Map<String,String> map;//需要拼接的语句
 	
 	public LqEntitySql(){
 		sql="";
-		cs=new ArrayList();
+		cs=new ArrayList<Object>();
 	}
 	public String getSql() {
 		return sql;
@@ -26,19 +26,19 @@ public class LqEntitySql {
 	public void setSql(String sql) {
 		this.sql = sql;
 	}
-	public List getCs() {
+	public List<Object> getCs() {
 		return cs;
 	}
-	public void setCs(List cs) {
+	public void setCs(List<Object> cs) {
 		this.cs = cs;
 	}
 	public Object[] getCsObjects(){
 		return cs.toArray();
 	}
-	public Map getMap() {
+	public Map<String,String> getMap() {
 		return map;
 	}
-	public void setMap(Map map) {
+	public void setMap(Map<String,String> map) {
 		this.map = map;
 	}
 	

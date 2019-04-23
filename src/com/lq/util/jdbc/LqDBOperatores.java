@@ -24,10 +24,10 @@ public class LqDBOperatores {
 	protected String sqlLog="";
 	protected String sqlSuccessTime="";
 	
-	private LqDBOperatores(){}
+	protected LqDBOperatores(){}
 
 	protected LqDBOperatores(Properties props){
-		driverClassName=props.getProperty("DriverClassName");
+		driverClassName=props.getProperty("DriverClassName".toLowerCase());
 		try {
 			dsWebgame.setDriverClass(driverClassName);
 		} catch (PropertyVetoException e) {

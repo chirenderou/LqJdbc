@@ -1,12 +1,17 @@
 package com.lq.util.jdbc;
 
 import java.sql.Connection;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
+import java.util.Map.Entry;
+import java.util.Set;
 
+import org.apache.commons.collections.map.ListOrderedMap;
 import org.apache.log4j.Logger;
 
 
@@ -19,8 +24,24 @@ import org.apache.log4j.Logger;
 public class Jdbc{
 
 	protected static Logger log = Logger.getLogger(Jdbc.class);
+	protected static Map<String,String> mapDSNames;
 	
 	private Jdbc(){}
+	
+	public static Map<String,String> getDSNames(){
+		if (mapDSNames!=null) {
+			return mapDSNames;
+		}
+		mapDSNames=new HashMap<String,String>();
+		Map<String,Properties> m=LqDBOperator.dataSourceNameMap;
+		Set<Entry<String, Properties>> set = m.entrySet();
+		Iterator<Entry<String,Properties>> it=set.iterator();
+		while (it.hasNext()) {
+			Entry<String,Properties> e=it.next();
+			mapDSNames.put(e.getKey(), e.getKey());
+		}
+		return mapDSNames;
+	}
 	
 	public static Jdbcs getDS(String dsName){
 		LqDBOperatores dbs=null;
@@ -50,6 +71,9 @@ public class Jdbc{
 		}else if(LqDBOperator.driverClassName.equalsIgnoreCase("oracle.jdbc.driver.OracleDriver")){
 			//Oracle
 			return databasesSelectInterface.oracle();
+		}else if(LqDBOperator.driverClassName.equalsIgnoreCase("org.sqlite.JDBC")){
+			//SqlLite
+			return databasesSelectInterface.sqlLite();
 		}
 		return null;
 	}
@@ -69,6 +93,9 @@ public class Jdbc{
 		}else if(LqDBOperator.driverClassName.equalsIgnoreCase("oracle.jdbc.driver.OracleDriver")){
 			//Oracle
 			return databasesInterfaceForObject.oracle();
+		}else if(LqDBOperator.driverClassName.equalsIgnoreCase("org.sqlite.JDBC")){
+			//SqlLite
+			return databasesInterfaceForObject.sqlLite();
 		}
 		return null;
 	}
@@ -111,6 +138,9 @@ public class Jdbc{
 				}else if(dbo.driverClassName.equalsIgnoreCase("oracle.jdbc.driver.OracleDriver")){
 					//Oracle
 					return databasesSelectInterface.oracle();
+				}else if(LqDBOperator.driverClassName.equalsIgnoreCase("org.sqlite.JDBC")){
+					//SqlLite
+					return databasesSelectInterface.sqlLite();
 				}
 			}
 		}
@@ -155,6 +185,9 @@ public class Jdbc{
 				}else if(dbo.driverClassName.equalsIgnoreCase("oracle.jdbc.driver.OracleDriver")){
 					//Oracle
 					return databasesInterfaceForObject.oracle();
+				}else if(LqDBOperator.driverClassName.equalsIgnoreCase("org.sqlite.JDBC")){
+					//SqlLite
+					return databasesInterfaceForObject.sqlLite();
 				}
 			}
 		}
@@ -325,9 +358,9 @@ public class Jdbc{
 	 * @return
 	 */
 	@Deprecated
-	public static Page findPage(String sql,Integer pageNumber,Integer pageSize,Long totalCount){
+	public static <T> Page<T> findPage(String sql,Integer pageNumber,Integer pageSize,Long totalCount,Class<T> cls){
 		LqJdbcFactory jdbc=new LqJdbcFactory(getCon());
-		Page page= jdbc.find(sql, pageNumber, pageSize, totalCount);
+		Page<T> page= jdbc.find(sql, pageNumber, pageSize, totalCount,cls);
 		jdbc.close();
 		return page;
 	}
@@ -340,9 +373,58 @@ public class Jdbc{
 	 * @param totalCount 总记录数
 	 * @return
 	 */
-	public static Page findPage(String sql,Integer pageNumber,Integer pageSize,Long totalCount,Object... obj){
+	public static <T> Page<T> findPage(String sql,Integer pageNumber,Integer pageSize,Long totalCount,Class<T> cls,Object... obj){
 		LqJdbcFactory jdbc=new LqJdbcFactory(getCon());
-		Page page= jdbc.find(sql, pageNumber, pageSize, totalCount,obj);
+		Page<T> page= jdbc.find(sql, pageNumber, pageSize, totalCount,cls,obj);
+		jdbc.close();
+		return page;
+	}
+	
+	/**
+	 * 分页《安全》<br>
+	 * SQL_SERVER_2005分页:SELECT ROW_NUMBER() OVER (ORDER BY id) AS RowNumber,* from tableName
+	 * @param <T>
+	 * @param sql
+	 * @param pageNumber1 当前页数
+	 * @param pageSize 一页所显示的记录数
+	 * @param sqlCount 得总记录数SQL
+	 * @return
+	 */
+	public static <T> Page<T> findPage(String sql,Integer pageNumber,Integer pageSize,String sqlCount,Class<T> cls,Object... obj){
+		LqJdbcFactory jdbc=new LqJdbcFactory(getCon());
+		Page<T> page= jdbc.find(sql, pageNumber, pageSize, sqlCount,cls,obj);
+		jdbc.close();
+		return page;
+	}
+	
+	
+	/**
+	 * 分页
+	 * @param sql
+	 * @param pageNumber
+	 * @param pageSize
+	 * @param totalCount
+	 * @return
+	 */
+	@Deprecated
+	public static Page<ListOrderedMap> findPage(String sql,Integer pageNumber,Integer pageSize,Long totalCount){
+		LqJdbcFactory jdbc=new LqJdbcFactory(getCon());
+		Page<ListOrderedMap> page= jdbc.find(sql, pageNumber, pageSize, totalCount);
+		jdbc.close();
+		return page;
+	}
+	/**
+	 * 分页《安全》<br>
+	 * SQL_SERVER_2005分页:SELECT ROW_NUMBER() OVER (ORDER BY id) AS RowNumber,* from tableName
+	 * @param sql
+	 * @param pageNumber1 当前页数
+	 * @param pageSize 一页所显示的记录数
+	 * @param totalCount 总记录数
+	 * @return
+	 */
+	public static Page<ListOrderedMap> findPage(String sql,Integer pageNumber,Integer pageSize,Long totalCount,Object... obj){
+		LqJdbcFactory jdbc=new LqJdbcFactory(getCon());
+		Page<ListOrderedMap> page= jdbc.find(sql, pageNumber, pageSize, totalCount,obj);
 		jdbc.close();
 		return page;
 	}
@@ -356,22 +438,22 @@ public class Jdbc{
 	 * @param sqlCount 得总记录数SQL
 	 * @return
 	 */
-	public static Page findPage(String sql,Integer pageNumber,Integer pageSize,String sqlCount,Object... obj){
+	public static Page<ListOrderedMap> findPage(String sql,Integer pageNumber,Integer pageSize,String sqlCount,Object... obj){
 		LqJdbcFactory jdbc=new LqJdbcFactory(getCon());
-		Page page= jdbc.find(sql, pageNumber, pageSize, sqlCount,obj);
+		Page<ListOrderedMap> page= jdbc.find(sql, pageNumber, pageSize, sqlCount,obj);
 		jdbc.close();
 		return page;
 	}
 	
 	/**
-	 * 查询<有BUG>
+	 * 查询
 	 * @param sql
 	 * @param cls
 	 * @return
 	 */
 	@Deprecated
 	public static <T> List<T> find(String sql,Class<T> cls){
-		List list=null;
+		List<T> list=null;
 		LqJdbcFactory jdbc=new LqJdbcFactory(getCon());
 		list = jdbc.find(sql,cls);
 		jdbc.close();
@@ -379,14 +461,14 @@ public class Jdbc{
 	}
 	
 	/**
-	 * 查询<有BUG>
+	 * 查询
 	 * @param sql
 	 * @param cls
 	 * @param obj
 	 * @return
 	 */
 	public static <T> List<T> find(String sql,Class<T> cls,Object... obj){
-		List list=null;
+		List<T> list=null;
 		LqJdbcFactory jdbc=new LqJdbcFactory(getCon());
 		list = jdbc.find(sql,cls,obj);
 		jdbc.close();
@@ -399,8 +481,8 @@ public class Jdbc{
 	 * @return
 	 */
 	@Deprecated
-	public static List<Map> find(String sql){
-		List list=null;
+	public static List<ListOrderedMap> find(String sql){
+		List<ListOrderedMap> list=null;
 		LqJdbcFactory jdbc=new LqJdbcFactory(getCon());
 		list = jdbc.find(sql);
 		jdbc.close();
@@ -411,8 +493,8 @@ public class Jdbc{
 	 * @param sql
 	 * @return
 	 */
-	public static List<Map> find(String sql,Object... obj){
-		List list=null;
+	public static List<ListOrderedMap> find(String sql,Object... obj){
+		List<ListOrderedMap> list=null;
 		LqJdbcFactory jdbc=new LqJdbcFactory(getCon());
 		list = jdbc.find(sql,obj);
 		jdbc.close();
@@ -540,6 +622,10 @@ public class Jdbc{
     	new LqGoEntity(path,tableName,url,driver,privateKey);
  		System.out.println("生成实体类成功!");
     }
+    public static void createEntity(String path,String tableName,String url,String driver,String privateKey,String dynamicPath){
+    	new LqGoEntity(path,tableName,url,driver,privateKey,dynamicPath);
+ 		System.out.println("生成实体类成功!");
+    }
     
     /**
      * 生成表对应实体类
@@ -547,8 +633,12 @@ public class Jdbc{
      * @param tableName 表名
      * @param privateKey 主键,无主键设成唯一标识符的字段
      */
-   public static void createEntity(String path,String tableName,String privateKey){
-	   new LqGoEntity(path,tableName,privateKey);
+    public static void createEntity(String path,String tableName,String privateKey){
+ 	   new LqGoEntity(path,tableName,privateKey);
+ 	   System.out.println("生成实体类成功!");
+    }
+   public static void createEntity(String path,String tableName,String privateKey,String dynamicPath){
+	   new LqGoEntity(path,tableName,privateKey,dynamicPath);
 	   System.out.println("生成实体类成功!");
    }
    
@@ -560,9 +650,9 @@ public class Jdbc{
 	* @param privateKey 主键或是编号
 	* @return 0:插入语句,1修改语句,2参数
 	*/
-	public static List createSQL(String tableName,String url,String driver,String privateKey){
+	public static List<String> createSQL(String tableName,String url,String driver,String privateKey){
 		LqGoInsertAndUpdateAndSelect a=new LqGoInsertAndUpdateAndSelect(tableName,url,driver,privateKey);
-		List list=new ArrayList();
+		List<String> list=new ArrayList<String>();
 		list.add(a.insertStr);
 		list.add(a.insertObj);
 		list.add(a.updateStr);
@@ -576,9 +666,9 @@ public class Jdbc{
 	 * @param privateKey 主键或是编号
 	 * @return 0:插入语句,1修改语句,2参数
 	 */
-	public static List createSQL(String tableName,String privateKey){
+	public static List<String> createSQL(String tableName,String privateKey){
 		LqGoInsertAndUpdateAndSelect a=new LqGoInsertAndUpdateAndSelect(tableName,privateKey);
-		List list=new ArrayList();
+		List<String> list=new ArrayList<String>();
 		list.add(a.insertStr);
 		list.add(a.insertObj);
 		list.add(a.updateStr);

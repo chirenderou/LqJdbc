@@ -5,6 +5,11 @@ package com.lq.util.jdbc;
  * email:liuqingrou@163.com
  */
 public class LqJdbcException extends Exception{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public LqJdbcException(String msg){ 
 		super(msg); 
 	} 

@@ -72,11 +72,10 @@ public class LqJdbcFactory {
 	 * @param properties
 	 */
 	public LqJdbcFactory(String properties){
-		LqConfig conf= new LqConfig();
-		conf.init(properties);
+		LqConfig conf= new LqConfig(properties);
 		try {
-			Class.forName(conf.getString("dataSource.driverClassName"));
-			conn = DriverManager.getConnection(conf.getString("dataSource.allurl").split("\\*\\*\\*")[0],conf.getString("dataSource.allurl").split("\\*\\*\\*")[1],conf.getString("dataSource.allurl").split("\\*\\*\\*")[2]);
+			Class.forName(conf.getString("DriverClassName"));
+			conn = DriverManager.getConnection(conf.getString("AllUrl").split("\\*\\*\\*")[0],conf.getString("AllUrl").split("\\*\\*\\*")[1],conf.getString("AllUrl").split("\\*\\*\\*")[2]);
 		} catch (Exception e) {
 			log.error("LqJdbc",e);
 			e.printStackTrace();
@@ -99,7 +98,7 @@ public class LqJdbcFactory {
 	}
 	
 	/**
-	 * 查询《安全》有BUG
+	 * 查询《安全》
 	 * @param sql
 	 * @return
 	 * @throws SQLException
@@ -107,9 +106,9 @@ public class LqJdbcFactory {
 	public  <T> List<T> find(String sql,Class<T> cls,Object... obj){
 		int b=1;//是否关闭连接
 		java.sql.ResultSet rs = null;
-		ArrayList list = new ArrayList();
+		ArrayList<T> list=null;
 		try {
-			list = new ArrayList();
+			list = new ArrayList<T>();
 			pstmt = conn.prepareStatement(sql);
 			if (obj!=null) {
 				for (int i = 1; i <= obj.length; i++) {
@@ -118,8 +117,8 @@ public class LqJdbcFactory {
 			}
 			rs = pstmt.executeQuery();
 			log.info(sql.replaceAll("\r\n", " "));
-			ResultSetMetaData rsm = rs.getMetaData();// 获取数据库表结构
-			int col = rsm.getColumnCount();// 获取数据库的列数
+			//ResultSetMetaData rsm = rs.getMetaData();// 获取数据库表结构
+			//int col = rsm.getColumnCount();// 获取数据库的列数
 			while (rs.next()) {
 				T t = executeResultSet(cls, rs);
                 list.add(t);
@@ -205,7 +204,6 @@ public class LqJdbcFactory {
 	 * @return 文件流
 	 */
 	public ResultSet findResultSet(String sql,Object... obj){
-		ArrayList<ListOrderedMap> list = new ArrayList<ListOrderedMap>();
 		try {
 			pstmt = conn.prepareStatement(sql);
 			if (obj != null) {
@@ -359,16 +357,16 @@ public class LqJdbcFactory {
 	 * @param totalCount 总记录数
 	 * @return
 	 */
-	public Page find(String sql, Integer pageNumber, Integer pageSize,Long totalCount, Object... obj) {
+	public <T> Page<T> find(String sql, Integer pageNumber, Integer pageSize,Long totalCount,Class<T> cls, Object... obj) {
 		if (pageNumber == null || pageNumber<1 ) {
 			pageNumber = 1;
 		}
 		if (totalCount <= 0) {
-			return new Page();
+			return new Page<T>();
 		}
 		long totalPageCount = getTotalPageCount(totalCount, pageSize);
 		if (pageNumber > totalPageCount) {
-			pageNumber = Long.valueOf(totalPageCount).intValue();
+			//pageNumber = Long.valueOf(totalPageCount).intValue();
 		}
 		int startIndex = Page.getStartOfPage(pageNumber, pageSize);
 		StringBuffer exeSql = new StringBuffer(sql);
@@ -396,6 +394,102 @@ public class LqJdbcFactory {
 			}else {
 				exeSql.append("SELECT TOP ").append(pageSize).append(" * FROM ( ").append(sql).append(" ) as row_ WHERE RowNumber > ").append(pageSize*(pageNumber-1));
 			}
+		}else if(LqDBOperator.driverClassName.toLowerCase().indexOf("sqlite")!=-1) {
+			exeSql.append(" limit ").append(startIndex).append(",").append(pageSize);
+		}else {
+			try {
+				StringBuffer eStringBuffer=new StringBuffer();
+				eStringBuffer.append("不支持这个驱动的分页:").append(LqDBOperator.driverClassName);
+				throw new LqJdbcException(eStringBuffer.toString());
+			} catch (LqJdbcException e) {
+				g();
+				log.error("LqJdbc",e);
+				e.printStackTrace();
+			}
+		}
+		List<T> list =find(exeSql.toString(),cls,obj);
+		return new Page<T>(startIndex, totalCount, pageSize, list,Page.DEFAULT_GROUP_PAGE_SIZE);
+	}
+	
+	/**
+	 * 分页《安全》<br>
+	 * SQL_SERVER_2005分页:SELECT ROW_NUMBER() OVER (ORDER BY id) AS RowNumber,* from tableName
+	 * @param sql
+	 * @param pageNumber1 当前页数
+	 * @param pageSize 一页所显示的记录数
+	 * @param sqlCount 得总记录数SQL
+	 * @return
+	 */
+	public <T> Page<T> find(String sql,Integer pageNumber,Integer pageSize,String sqlCount,Class<T> cls,Object... obj){
+		long totalCount=0;
+		List<ListOrderedMap> listCount=find(sqlCount,obj);
+		if (listCount.size()>0) {
+			ListOrderedMap mapCount=listCount.get(0);
+			if (mapCount.size()==1){
+				totalCount=Long.valueOf(mapCount.values().toArray()[0].toString());
+			}else {
+				try {
+					StringBuffer eStringBuffer=new StringBuffer();
+					eStringBuffer.append("查询总记录数的SQL有问题,只能返回一个数量,不能返回多个字段.\r\n").append("SQL:").append(sqlCount);
+					throw new LqJdbcException(eStringBuffer.toString());
+				} catch (LqJdbcException e) {
+					g();
+					log.error("LqJdbc",e);
+					e.printStackTrace();
+				}
+			}
+		}
+		return find(sql,pageNumber,pageSize,totalCount,cls,obj);
+	}
+	
+	/**
+	 * 分页《安全》<br>
+	 * SQL_SERVER_2005分页:SELECT ROW_NUMBER() OVER (ORDER BY id) AS RowNumber,* from tableName
+	 * @param sql
+	 * @param pageNumber 当前页数
+	 * @param pageSize 一页所显示的记录数
+	 * @param totalCount 总记录数
+	 * @return
+	 */
+	public Page<ListOrderedMap> find(String sql, Integer pageNumber, Integer pageSize,Long totalCount, Object... obj) {
+		if (pageNumber == null || pageNumber<1 ) {
+			pageNumber = 1;
+		}
+		if (totalCount <= 0) {
+			return new Page<ListOrderedMap>();
+		}
+		long totalPageCount = getTotalPageCount(totalCount, pageSize);
+		if (pageNumber > totalPageCount) {
+			//pageNumber = Long.valueOf(totalPageCount).intValue();
+		}
+		int startIndex = Page.getStartOfPage(pageNumber, pageSize);
+		StringBuffer exeSql = new StringBuffer(sql);
+		if (LqDBOperator.driverClassName.toLowerCase().indexOf("mysql")!=-1) {
+			exeSql.append(" limit ").append(startIndex).append(",").append(pageSize);
+		}else if (LqDBOperator.driverClassName.toLowerCase().indexOf("oracle")!=-1) {
+			exeSql.append("select * from (select row_.*, rownum rownum_  from (").append(sql).append(") row_").append(" where rownum <= ").append(startIndex + pageSize).append(")").append(" where rownum_ >").append(startIndex);
+		}else if(LqDBOperator.driverClassName.toLowerCase().indexOf("sqlserver")!=-1){
+			/**
+			 * 注解：首先利用Row_number()为table1表的每一行添加一个行号，给行号这一列取名'RowNumber' 在over()方法中将'RowNumber'做了升序排列
+			 * 然后将'RowNumber'列 与table1表的所有列 形成一个表A
+			 * 重点在where条件。假如当前页(currentPage)是第2页，每页显示10个数据(pageSzie)。那么第一页的数据就是第11-20条
+			 * 所以为了显示第二页的数据，即显示第11-20条数据，那么就让RowNumber大于 10*(2-1) 即：页大小*(当前页-1)
+			 */
+			exeSql=new StringBuffer();
+			int count=0;
+			Pattern p=Pattern.compile("(order by){1}");
+			Matcher m=p.matcher(sql.toLowerCase());
+			while (m.find()) {
+				count++;
+			}
+			int w=sql.toLowerCase().lastIndexOf("order by");
+			if (w!=-1&&count>1) {
+				exeSql.append("SELECT TOP ").append(pageSize).append(" * FROM ( ").append(sql.substring(0, w)).append(" ) as row_ WHERE RowNumber > ").append(pageSize*(pageNumber-1)).append(" "+sql.substring(w, sql.length()));
+			}else {
+				exeSql.append("SELECT TOP ").append(pageSize).append(" * FROM ( ").append(sql).append(" ) as row_ WHERE RowNumber > ").append(pageSize*(pageNumber-1));
+			}
+		}else if(LqDBOperator.driverClassName.toLowerCase().indexOf("sqlite")!=-1) {
+			exeSql.append(" limit ").append(startIndex).append(",").append(pageSize);
 		}else {
 			try {
 				StringBuffer eStringBuffer=new StringBuffer();
@@ -408,7 +502,7 @@ public class LqJdbcFactory {
 			}
 		}
 		List<ListOrderedMap> list =find(exeSql.toString(),obj);
-		return new Page(startIndex, totalCount, pageSize, list,Page.DEFAULT_GROUP_PAGE_SIZE);
+		return new Page<ListOrderedMap>(startIndex, totalCount, pageSize, list,Page.DEFAULT_GROUP_PAGE_SIZE);
 	}
 	
 	/**
@@ -420,7 +514,7 @@ public class LqJdbcFactory {
 	 * @param sqlCount 得总记录数SQL
 	 * @return
 	 */
-	public Page find(String sql,Integer pageNumber,Integer pageSize,String sqlCount,Object... obj){
+	public Page<ListOrderedMap> find(String sql,Integer pageNumber,Integer pageSize,String sqlCount,Object... obj){
 		long totalCount=0;
 		List<ListOrderedMap> listCount=find(sqlCount,obj);
 		if (listCount.size()>0) {
@@ -481,8 +575,8 @@ public class LqJdbcFactory {
  		String strDelWhereSql="";
  		Object strDelObject=null;
  		
- 		List<Object> objList=new ArrayList();
-    	Class cla=obj.getClass();
+ 		List<Object> objList=new ArrayList<Object>();
+    	Class<? extends Object> cla=obj.getClass();
     	Annotation an=cla.getAnnotation(Table.class);
     	if (an==null) {
     		try {
@@ -665,7 +759,7 @@ public class LqJdbcFactory {
     	return b;
     }
     
-    @Deprecated
+    //@Deprecated
     protected static <T> T executeResultSet(Class<T> cls, ResultSet rs) throws InstantiationException, IllegalAccessException, SQLException {
         T obj = cls.newInstance();
         ResultSetMetaData rsm = rs.getMetaData();
@@ -674,23 +768,46 @@ public class LqJdbcFactory {
         for (int i = 0; i < fields.length; i++) {
             Field field = fields[i];
             field.setAccessible(true);//类中的成员变量为private,故必须进行此操作
-            Sql zd = field.getAnnotation(Sql.class);
+            Column zd = field.getAnnotation(Column.class);
             String fieldName=null;
-            if (zd==null) {
-            	fieldName = field.getName();
+            if (zd!=null) {
+            	fieldName = zd.column();
 			}else {
-				fieldName = zd.column();
+				fieldName = field.getName();
 			}
             for (int j = 1; j <= columnCount; j++) {
                 String columnName = rsm.getColumnName(j);
-                if (fieldName.equalsIgnoreCase(columnName)) {
+                if (zd!=null && fieldName.equalsIgnoreCase(columnName)) {//如果注解存在，按注解字段名执行
                     Object value = rs.getObject(j);
                     if (value instanceof BigDecimal) {
-                    	field.set(obj, ((BigDecimal) value).doubleValue());
+                    	//field.set(obj, ((BigDecimal) value).doubleValue());
+                    	field.set(obj, value);
 					}else {
 						field.set(obj, value);
 					}
                     break;
+                }else if(zd==null) {
+                	if(fieldName.equalsIgnoreCase(xhxCap(columnName))) {//如果去下滑线大写存在，按去下滑线大写字段字执行
+                		Object value = rs.getObject(j);
+                        if (value instanceof BigDecimal) {
+                        	//field.set(obj, ((BigDecimal) value).doubleValue());
+                        	field.set(obj, value);
+    					}else {
+    						field.set(obj, value);
+    					}
+                        break;
+                	}else if(fieldName.equalsIgnoreCase(columnName)) {//如果以上都不存在，按属性名等字段名执行
+                		Object value = rs.getObject(j);
+                        if (value instanceof BigDecimal) {
+                        	//field.set(obj, ((BigDecimal) value).doubleValue());
+                        	field.set(obj, value);
+    					}else {
+    						field.set(obj, value);
+    					}
+                        break;
+                	}else {
+                		//没有匹配到当前字段，实体类中不存在。
+                	}
                 }
             }
         }
@@ -713,6 +830,25 @@ public class LqJdbcFactory {
 			csSB.append(obj[i]).append("___");
 		}
 		log.info(csSB);
+    }
+    
+    
+    /**
+     * 下划线转去掉,后一个字母转大写
+     * @param str
+     * @return
+     */
+    protected static String xhxCap(String str){
+    	String[] col=str.split("_");
+    	StringBuffer sBuffer=new StringBuffer();
+    	for (int j = 0; j < col.length; j++) {
+    		if (j==0) {
+    			sBuffer.append(col[j]);
+			}else {
+				sBuffer.append(col[j]);
+			}
+		}
+    	return sBuffer.toString();
     }
 	
 }

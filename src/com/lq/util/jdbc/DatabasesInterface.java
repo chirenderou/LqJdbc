@@ -11,5 +11,6 @@ public interface DatabasesInterface {
 	public String oracle();
 	public String mysql();
 	public String sqlserver();
+	public String sqlLite();
 	
 }
